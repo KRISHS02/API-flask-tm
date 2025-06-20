@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Task Manager</h1>
+        
+        <!-- Add Task Form -->
+        <div class="card">
+            <h2>Add New Task</h2>
+            <div class="form-group">
+                <label for="taskTitle">Title:</label>
+                <input type="text" id="taskTitle" placeholder="Enter task title">
+            </div>
+            <div class="form-group">
+                <label for="taskDesc">Description:</label>
+                <textarea id="taskDesc" placeholder="Enter description"></textarea>
+            </div>
+            <button onclick="addTask()">Add Task</button>
+        </div>
+        
+        <!-- Task List -->
+        <div class="card">
+            <h2>Your Tasks</h2>
+            <div id="tasksContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch and display tasks
+        async function loadTasks() {
+            try {
+                const response = await fetch('/tasks');
+                const tasks = await response.json();
+                
+                let html = '';
+                tasks.forEach(task => {
+                    html += `
+                    <div class="task" id="task-${task.id}">
+                        <div class="task-header">
+                            <h3>${task.title}</h3>
+                            <div>
+                                <button class="btn-update" onclick="showUpdateForm(${task.id})">✏️</button>
+                                <button class="btn-delete" onclick="deleteTask(${task.id})">🗑️</button>
+                            </div>
+                        </div>
+                        <p>${task.description || 'No description'}</p>
+                        <div class="update-form" id="updateForm-${task.id}" style="display:none">
+                            <input type="text" id="updateTitle-${task.id}" value="${task.title}">
+                            <textarea id="updateDesc-${task.id}">${task.description || ''}</textarea>
+                            <button onclick="updateTask(${task.id})">Update</button>
+                        </div>
+                    </div>`;
+                });
+                
+                document.getElementById('tasksContainer').innerHTML = html || '<p>No tasks found</p>';
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+        
+        // Add new task
+        async function addTask() {
+            const title = document.getElementById('taskTitle').value;
+            const description = document.getElementById('taskDesc').value;
+            
+            if (!title) {
+                alert('Title is required');
+                return;
+            }
+            
+            try {
+                await fetch('/tasks', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title, description})
+                });
+                
+                // Clear form and reload tasks
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskDesc').value = '';
+                loadTasks();
+            } catch (error) {
+                console.error('Error adding task:', error);
+            }
+        }
+        
+        // Show update form
+        function showUpdateForm(taskId) {
+            const form = document.getElementById(`updateForm-${taskId}`);
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Update existing task
+        async function updateTask(taskId) {
+            const title = document.getElementById(`updateTitle-${taskId}`).value;
+            const description = document.getElementById(`updateDesc-${taskId}`).value;
+            
+            if (!title) {
+                alert('Title is required');
+                return;
+            }
+            
+            try {
+                await fetch(`/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title, description})
+                });
+                
+                // Hide form and reload tasks
+                document.getElementById(`updateForm-${taskId}`).style.display = 'none';
+                loadTasks();
+            } catch (error) {
+                console.error('Error updating task:', error);
+            }
+        }
+        
+        // Delete task
+        async function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+            
+            try {
+                await fetch(`/tasks/${taskId}`, {method: 'DELETE'});
+                loadTasks();
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
+        
+        // Initial load
+        loadTasks();
+    </script>
+</body>
+</html>
