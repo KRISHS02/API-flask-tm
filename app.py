@@ -127,3 +127,28 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+def is_valid_task_data(data):
+    """Validate task data for unit testing"""
+    return data and 'title' in data and isinstance(data.get('title'), str) and data['title'].strip()
+
+# Add these functions to support testing
+def is_valid_task_data(data):
+    """Validation logic for unit tests"""
+    return 'title' in data and data['title'].strip()
+
+def create_task(title, description=""):
+    """Database operation wrapper for integration tests"""
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "INSERT INTO tasks (title, description) VALUES (%s, %s)",
+        (title, description)
+    )
+    mysql.connection.commit()
+    return cursor.lastrowid
+
+def get_task(task_id):
+    """Database operation wrapper"""
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM tasks WHERE id = %s", (task_id,))
+    return cursor.fetchone()
