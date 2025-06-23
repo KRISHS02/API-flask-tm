@@ -4,6 +4,7 @@ from app import app as flask_app
 
 @pytest.fixture(scope='module')
 def app():
+    # Configure test settings
     flask_app.config['TESTING'] = True
     flask_app.config['MYSQL_DB'] = 'test_task_db'
     
