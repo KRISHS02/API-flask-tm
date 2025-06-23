@@ -119,6 +119,22 @@ def delete_task(task_id):
     finally:
         if cur: cur.close()
 
+@app.route('/tasks/<int:task_id>', methods=['GET'])
+def get_single_task(task_id):
+    cur = None
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT * FROM tasks WHERE id = %s", (task_id,))
+        task = cur.fetchone()
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        return jsonify(task)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cur: cur.close()
+
+
 # Frontend Routes
 @app.route('/')
 def index():
