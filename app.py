@@ -84,24 +84,28 @@ def update_task(task_id):
             return jsonify({'error': 'No data provided'}), 400
             
         cur = mysql.connection.cursor()
-        # Check if task exists
         cur.execute("SELECT * FROM tasks WHERE id = %s", (task_id,))
         task = cur.fetchone()
+        
         if not task:
             return jsonify({'error': 'Task not found'}), 404
             
-        # Update task
-        title = data.get('title', task['title'])
-        description = data.get('description', task['description'])
+        # Get values safely
+        new_title = data.get('title') or task['title']
+        new_description = data.get('description') or task['description']
+        
         cur.execute(
             "UPDATE tasks SET title = %s, description = %s WHERE id = %s",
-            (title, description, task_id)
+            (new_title, new_description, task_id)
         )
         mysql.connection.commit()
-        cur.close()
-        return jsonify({'message': 'Task updated'})
+        return jsonify({'message': 'Task updated'}), 200
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+
 
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
