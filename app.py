@@ -134,8 +134,6 @@ def get_single_task(task_id):
     finally:
         if cur: cur.close()
 
-
-# Frontend Routes
 @app.route('/')
 def index():
     return render_template('index.html')
