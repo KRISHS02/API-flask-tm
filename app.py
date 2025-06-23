@@ -61,7 +61,7 @@ def get_tasks():
 def add_task():
     try:
         data = request.get_json()
-        if not data or 'title' not in data:
+        if not data or not data.get('title'):
             return jsonify({'error': 'Title is required'}), 400
             
         cur = mysql.connection.cursor()
@@ -128,14 +128,10 @@ def index():
 if __name__ == '__main__':
     app.run(debug=True)
 
+# Helper functions for testing
 def is_valid_task_data(data):
     """Validate task data for unit testing"""
-    return data and 'title' in data and isinstance(data.get('title'), str) and data['title'].strip()
-
-# Add these functions to support testing
-def is_valid_task_data(data):
-    """Validation logic for unit tests"""
-    return 'title' in data and data['title'].strip()
+    return bool(data) and 'title' in data and isinstance(data.get('title'), str) and bool(data['title'].strip())
 
 def create_task(title, description=""):
     """Database operation wrapper for integration tests"""
