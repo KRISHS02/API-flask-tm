@@ -7,28 +7,23 @@ app = Flask(__name__)
 # MySQL Configuration
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'Krish@2002'  # REPLACE WITH YOUR PASSWORD
+app.config['MYSQL_PASSWORD'] = 'Krish@2002'
 app.config['MYSQL_DB'] = 'task_db'
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'  # For dictionary-style results
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
 # Auto-create database and table
 with app.app_context():
     try:
-        # Connect without specifying database
         conn = MySQLdb.connect(
             host=app.config['MYSQL_HOST'],
             user=app.config['MYSQL_USER'],
             password=app.config['MYSQL_PASSWORD']
         )
         cursor = conn.cursor()
-        
-        # Create database if not exists
         cursor.execute("CREATE DATABASE IF NOT EXISTS task_db")
         cursor.execute("USE task_db")
-        
-        # Create tasks table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -37,10 +32,8 @@ with app.app_context():
             )
         """)
         conn.commit()
-        print("✅ Database and table created successfully!")
-        
     except Exception as e:
-        print(f"❌ Database setup error: {str(e)}")
+        print(f"Database setup error: {str(e)}")
     finally:
         cursor.close()
         conn.close()
@@ -48,36 +41,41 @@ with app.app_context():
 # API Endpoints
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
+    cur = None
     try:
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM tasks")
         tasks = cur.fetchall()
-        cur.close()
         return jsonify(tasks)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if cur: cur.close()
 
 @app.route('/tasks', methods=['POST'])
 def add_task():
+    data = request.get_json()
+    if not data or not data.get('title') or not data['title'].strip():
+        return jsonify({'error': 'Valid title is required'}), 400
+        
+    cur = None
     try:
-        data = request.get_json()
-        if not data or not data.get('title'):
-            return jsonify({'error': 'Title is required'}), 400
-            
         cur = mysql.connection.cursor()
         cur.execute(
             "INSERT INTO tasks (title, description) VALUES (%s, %s)",
-            (data['title'], data.get('description', ''))
+            (data['title'].strip(), data.get('description', ''))
         )
         mysql.connection.commit()
         task_id = cur.lastrowid
-        cur.close()
         return jsonify({'id': task_id, 'message': 'Task added'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if cur: cur.close()
 
 @app.route('/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
+    cur = None
     try:
         data = request.get_json()
         if not data:
@@ -86,13 +84,11 @@ def update_task(task_id):
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM tasks WHERE id = %s", (task_id,))
         task = cur.fetchone()
-        
         if not task:
             return jsonify({'error': 'Task not found'}), 404
             
-        # Get values safely
-        new_title = data.get('title') or task['title']
-        new_description = data.get('description') or task['description']
+        new_title = data.get('title', task['title']).strip()
+        new_description = data.get('description', task['description'])
         
         cur.execute(
             "UPDATE tasks SET title = %s, description = %s WHERE id = %s",
@@ -100,18 +96,16 @@ def update_task(task_id):
         )
         mysql.connection.commit()
         return jsonify({'message': 'Task updated'}), 200
-        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
-        cur.close()
-
+        if cur: cur.close()
 
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
+    cur = None
     try:
         cur = mysql.connection.cursor()
-        # Check if task exists
         cur.execute("SELECT * FROM tasks WHERE id = %s", (task_id,))
         task = cur.fetchone()
         if not task:
@@ -119,10 +113,11 @@ def delete_task(task_id):
             
         cur.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
         mysql.connection.commit()
-        cur.close()
         return jsonify({'message': 'Task deleted'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if cur: cur.close()
 
 # Frontend Routes
 @app.route('/')
@@ -134,11 +129,9 @@ if __name__ == '__main__':
 
 # Helper functions for testing
 def is_valid_task_data(data):
-    """Validate task data for unit testing"""
     return bool(data) and 'title' in data and isinstance(data.get('title'), str) and bool(data['title'].strip())
 
 def create_task(title, description=""):
-    """Database operation wrapper for integration tests"""
     cursor = mysql.connection.cursor()
     cursor.execute(
         "INSERT INTO tasks (title, description) VALUES (%s, %s)",
@@ -148,7 +141,6 @@ def create_task(title, description=""):
     return cursor.lastrowid
 
 def get_task(task_id):
-    """Database operation wrapper"""
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT * FROM tasks WHERE id = %s", (task_id,))
     return cursor.fetchone()
