@@ -126,3 +126,7 @@ Include a screenshot like below after running tests:
 ## License
 
 This project is for educational and demonstration purposes.
+
+## OpenAPI Schema
+
+This project includes a complete [OpenAPI schema](openapi.yaml) describing all endpoints and data models.
